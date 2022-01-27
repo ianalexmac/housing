@@ -1,0 +1,84 @@
+---
+title: "housing"
+author: "ianalexmac"
+date: "1/27/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### library
+```{r}
+
+
+```
+
+
+```{r}
+test <- read.csv("~/R/housing/test.csv")
+train <- read.csv("~/R/housing/train.csv")
+
+test$SalePrice <- 0
+full <- rbind(train, test)
+
+meta <- read.delim("~/R/housing/data_description.txt")
+
+
+```
+
+
+### explore NAs
+NA heavy columns:
+  LotFrontage   486
+  GarageYrBlt   159
+  
+NA minimal columns (possible to fix):
+  MasVnrArea    23
+  BsmtFinSF1    1
+  BsmtFinSF2    1
+  BsmtUnfSF     1
+  TotalBsmt     1
+  BsmtFullBath  2
+  BsmtHalfBath  2
+  GarageCars    1
+  GarageArea    1
+  
+  
+#NAs in Masonry Veneer Type and Area ($MasVnrType, $MasVnrArea)
+```{r}
+summary(full)
+
+nada <- which(is.na(full$MasVnrArea))
+length(nada)
+na.mas.vnr <- full[nada,]
+
+#23 NAs for Masonry Veneer Type and Area
+#assume no Masonry Veneer for all 23 obs
+
+full$MasVnrArea <- ifelse(is.na(full$MasVnrArea), 0, full$MasVnrArea)
+summary(full$MasVnrArea)
+
+full$MasVnrType <- ifelse(is.na(full$MasVnrType), "None", full$MasVnrType)
+summary(full$MasVnrType)
+
+rm(na.mas.vnr)
+rm(nada)
+
+```
+
+
+###NAs in BsmtFinSF1
+15 NAs in single observation
+```{r}
+summary(full$BsmtFinSF1)
+
+nada <- which(is.na(full$BsmtFinSF1))
+no.bsmt.fin <- full[nada,]
+sum(is.na(no.bsmt.fin))
+
+
+```
+
+
