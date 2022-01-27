@@ -3,6 +3,8 @@ title: "housing"
 author: "ianalexmac"
 date: "1/27/2022"
 output: pdf_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -78,7 +80,24 @@ nada <- which(is.na(full$BsmtFinSF1))
 no.bsmt.fin <- full[nada,]
 sum(is.na(no.bsmt.fin))
 
+no.bsmt.fin$BsmtQual <- "TA"
+no.bsmt.fin$BsmtCond <- "TA"
+
 
 ```
 
+
+
+
+
+### convert character columns to factor
+```{r}
+
+full[sapply(full, is.character)] <- lapply(full[sapply(full, is.character)], as.factor)
+
+
+#####tidyverse version:
+###full <- full %>% mutate_if(is.factor, as.character)
+
+```
 
