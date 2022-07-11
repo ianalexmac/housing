@@ -1,0 +1,241 @@
+---
+title: "housing"
+author: "ianalexmac"
+date: "1/27/2022"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### library
+```{r}
+#install.packages('corrplot')
+#install.packages('car')
+#install.packages('mgcv')
+install.packages('visreg')
+
+
+library(corrplot)
+library(car)
+library(mgcv)
+library(visreg)
+
+```
+
+
+```{r}
+test <- read.csv("~/R/housing/test.csv")
+train <- read.csv("~/R/housing/train.csv")
+
+test$SalePrice <- 0
+data <- rbind(train, test)
+
+meta <- read.delim("~/R/housing/data_description.txt")
+
+
+```
+
+
+### convert character columns to factor,
+number columns to integers
+```{r}
+
+data[sapply(data, is.character)] <- lapply(data[sapply(data, is.character)], as.factor)
+data[sapply(data, is.numeric)] <- lapply(data[sapply(data, is.numeric)], as.integer)
+
+test[sapply(test, is.character)] <- lapply(test[sapply(test, is.character)], as.factor)
+test[sapply(test, is.numeric)] <- lapply(test[sapply(test, is.numeric)], as.integer)
+
+train[sapply(train, is.character)] <- lapply(train[sapply(train, is.character)], as.factor)
+train[sapply(train, is.numeric)] <- lapply(train[sapply(train, is.numeric)], as.integer)
+
+summary(data)
+
+
+#####tidyverse version:
+###data <- data %>% mutate_if(is.factor, as.character)
+
+```
+
+### explore NAs
+```{r}
+
+any(is.na(data))
+
+apply(data, 2, function(x) any(is.na(x)))
+
+apply(data, 2, function(x) sum(is.na(x)))
+
+```
+
+### cleaning NAs
+NA columns (* = easy resolution)
+  LotFrontage   486
+  Alley         2721
+  MSZoning      4
+  Utilities     2
+  Exterior1st   1*
+  Exterior2nd   1*
+  MasVnrArea    23
+  BsmtQual      81
+  BsmtCond      82
+  BsmtExposure  82
+  BsmtFinType1  79
+  BsmtFinSF1    1
+  BsmtFinSF2    1
+  BsmtUnfSF     1
+  TotalBsmtSF   1
+  Electrical    1*
+  BsmtdataBath  2
+  BsmtHalfBath  2
+  KitchenQual   1
+  Functional    2
+  FireplaceQu   1420
+  GarageType    157
+  GarageYrBlt   159
+  GarageFinish  159
+  GarageCars    1
+  GarageArea    1
+  GarageQual    159*
+  GarageCond    159*
+  PoolQC        2909
+  Fence         2348
+  MiscFeature   2814  (105 total, 95 are Shed)
+  SaleType      1*
+  
+  
+oddballs:
+  Neighborhood 1428 (Other)
+  Condition1    35 (Other)
+  Condition2    2  (Other)
+  HouseStyle    27 (Other)
+  RoofMatl      2  (Other)
+  
+probably drop:
+  Alley
+  PoolQC
+
+
+### cut and remove from data
+```{r}
+
+
+data$Fence <- NULL
+data$MiscFeature <- NULL
+data$Alley <- NULL
+data$PoolQC <- NULL
+data$GarageType <- NULL
+data$GarageYrBlt <- NULL
+data$GarageCond <- NULL
+data$GarageQual <- NULL
+data$GarageFinish <- NULL
+data$FireplaceQu <- NULL
+data$MasVnrType <- NULL
+data$MasVnrArea <- NULL
+data$BsmtQual <- NULL
+data$BsmtCond <- NULL
+data$BsmtExposure <- NULL
+data$BsmtFinType1 <- NULL
+data$BsmtFinType2 <- NULL
+data$LotFrontage <- NULL
+
+```
+
+
+### blatant assumptions
+```{r}
+
+data$MSZoning[is.na(data$MSZoning)] <- 'RL'
+data$SaleType[is.na(data$SaleType)] <- 'WD'
+data$Functional[is.na(data$Functional)] <- 'Typ'
+data$KitchenQual[is.na(data$KitchenQual)] <- 'TA'
+data$Exterior1st[is.na(data$Exterior1st)] <- 'VinylSd'
+data$Exterior2nd[is.na(data$Exterior2nd)] <- 'VinylSd'
+data$Utilities[is.na(data$Utilities)] <- 'AllPub'
+data$BsmtdataBath[is.na(data$BsmtdataBath)] <- 0
+data$BsmtFullBath[is.na(data$BsmtFullBath)] <- 0
+data$BsmtHalfBath[is.na(data$BsmtHalfBath)] <- 0
+data$BsmtFinSF1[is.na(data$BsmtFinSF1)] <- 0
+data$BsmtFinSF2[is.na(data$BsmtFinSF2)] <- 0
+data$BsmtUnfSF[is.na(data$BsmtUnfSF)] <- 0
+data$TotalBsmtSF[is.na(data$TotalBsmtSF)] <- 0
+data$GarageCars[is.na(data$GarageCars)] <- 0
+data$GarageArea[is.na(data$GarageArea)] <- 0
+data$Electrical[is.na(data$Electrical)] <- 'SBrkr'
+
+any(is.na(data))
+
+summary(data)
+```
+
+
+### split into train and test
+```{r}
+train <- data[1:1460,]
+test <- data[1461:2919,]
+
+any(is.na(test))
+any(is.na(train))
+
+
+```
+
+
+
+
+### correlation matrix
+```{r}
+int.data <- sapply(data, is.integer)
+corrplot(cor(data[,int.data]),type = "lower", mar = c(0,0,0,0))
+
+```
+
+### scatterplot matrix
+```{r}
+pairs(~YearBuilt + LotArea + GrLivArea + TotalBsmtSF + OverallQual, data = data)
+
+```
+
+### scatterplot exploration
+```{r}
+scatterplot(SalePrice ~ YearBuilt, data=train,  xlab="Year Built", ylab="Sale Price", grid=FALSE)
+
+scatterplot(SalePrice ~ GrLivArea, data=train,  xlab="Square Footage", ylab="Sale Price", grid=FALSE)
+
+```
+
+
+### regression model
+```{r}
+#everthing!
+lm_model_all <- lm(SalePrice ~ ., data=train)
+summary(lm_model_all)
+
+#more targeted 
+lm_model_some <- lm(SalePrice ~ LotArea + OverallQual + OverallCond + YearBuilt + 
+                    BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + ExterQual + RoofMatl +
+                    X1stFlrSF + X2ndFlrSF + BedroomAbvGr + KitchenQual + KitchenAbvGr, data=train)
+summary(lm_model_some)
+AIC(lm_model_some, lm_model_all)
+
+gam_model_some <- gam(SalePrice ~ s(LotArea) + OverallQual + OverallCond + s(YearBuilt) + 
+                    s(BsmtFinSF1) + s(BsmtFinSF2) + s(BsmtUnfSF) + ExterQual + RoofMatl +
+                    s(X1stFlrSF) + s(X2ndFlrSF) + BedroomAbvGr + KitchenQual + KitchenAbvGr, data=train)
+summary(gam_model_some)
+visreg(gam_model_some)
+
+#exp
+gam_play <- gam(SalePrice ~ s(LotArea) +s(YearBuilt),
+                data = train)
+summary(gam_play)
+visreg(gam_play)
+
+
+AIC(lm_model_some, gam_model_some, gam_play)
+
+```
+
